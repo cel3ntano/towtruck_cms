@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_shared_features_lists",
+  "info": {
+    "displayName": "Features List",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "feature_text": {
+      "type": "string"
+    },
+    "feature_icon": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::feature-icon.feature-icon"
+    }
+  }
+}

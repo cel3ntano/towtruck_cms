@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_sections_contacts_sections",
+  "info": {
+    "displayName": "Contacts Section",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "description": {
+      "type": "string"
+    },
+    "phone_numbers": {
+      "displayName": "phone_number",
+      "type": "component",
+      "repeatable": true,
+      "component": "shared.phone-number"
+    }
+  }
+}

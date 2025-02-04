@@ -1,0 +1,31 @@
+{
+  "kind": "collectionType",
+  "collectionName": "feature_icons",
+  "info": {
+    "singularName": "feature-icon",
+    "pluralName": "feature-icons",
+    "displayName": "Feature Icon",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "icon_name": {
+      "type": "string",
+      "required": true
+    },
+    "svg_base64": {
+      "type": "text",
+      "required": true
+    },
+    "icon_file": {
+      "allowedTypes": [
+        "images"
+      ],
+      "type": "media",
+      "multiple": false
+    }
+  }
+}

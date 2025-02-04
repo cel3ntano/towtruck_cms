@@ -1,0 +1,149 @@
+name: Deploy Strapi to cPanel
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18.20.5'
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Build Strapi
+        run: npm run build
+        env:
+          NODE_ENV: production
+          DATABASE_CLIENT: mysql
+          DATABASE_HOST: ${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT: ${{ secrets.DATABASE_PORT }}
+          DATABASE_NAME: ${{ secrets.DATABASE_NAME }}
+          DATABASE_USERNAME: ${{ secrets.DATABASE_USERNAME }}
+          DATABASE_PASSWORD: ${{ secrets.DATABASE_PASSWORD }}
+          ADMIN_JWT_SECRET: ${{ secrets.ADMIN_JWT_SECRET }}
+          API_TOKEN_SALT: ${{ secrets.API_TOKEN_SALT }}
+          APP_KEYS: ${{ secrets.APP_KEYS }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          TRANSFER_TOKEN_SALT: ${{ secrets.TRANSFER_TOKEN_SALT }}
+          STRAPI_UPLOADS_PATH: ${{ format('{0}/public/uploads', secrets.STRAPI_APP_PATH) }}
+
+      - name: Prepare Deploy Package
+        run: |
+          mkdir -p deploy-package
+          # Copy Strapi build artifacts and necessary files
+          cp -r dist deploy-package/
+          cp -r config deploy-package/
+          cp -r public deploy-package/
+          cp -r src deploy-package/
+          cp tsconfig.json deploy-package/
+          cp server.js deploy-package/
+          cp package.json deploy-package/
+          cp package-lock.json deploy-package/
+
+      - name: Create Production Environment File
+        run: |
+          echo "HOST=0.0.0.0
+          PORT=1337
+          APP_KEYS=${{ secrets.APP_KEYS }}
+          API_TOKEN_SALT=${{ secrets.API_TOKEN_SALT }}
+          ADMIN_JWT_SECRET=${{ secrets.ADMIN_JWT_SECRET }}
+          DATABASE_CLIENT=mysql
+          DATABASE_HOST=${{ secrets.DATABASE_HOST }}
+          DATABASE_PORT=${{ secrets.DATABASE_PORT }}
+          DATABASE_NAME=${{ secrets.DATABASE_NAME }}
+          DATABASE_USERNAME=${{ secrets.DATABASE_USERNAME }}
+          DATABASE_PASSWORD=${{ secrets.DATABASE_PASSWORD }}
+          TRANSFER_TOKEN_SALT: ${{ secrets.TRANSFER_TOKEN_SALT }}
+          JWT_SECRET=${{ secrets.JWT_SECRET }}
+          STRAPI_UPLOADS_PATH=${{ format('{0}/public/uploads', secrets.STRAPI_APP_PATH) }}
+          NODE_ENV=production" > deploy-package/.env
+
+      - name: Validate Deploy Package
+        run: |
+          if [ ! -d "deploy-package" ]; then
+            echo "❌ Deploy package not found!" && exit 1
+          fi
+          if [ ! -d "deploy-package/dist" ]; then
+            echo "❌ dist folder is missing in deploy package!" && exit 1
+          fi
+          echo "📦 Deploy package contents:"
+          ls -la deploy-package/
+
+      - name: Generate Known Hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -p 722 ${{ secrets.CPANEL_HOST }} | sort | uniq > ~/.ssh/known_hosts
+
+      - name: Configure SSH
+        run: |
+          echo "
+          Host cpanel
+            HostName ${{ secrets.CPANEL_HOST }}
+            Port 722
+            User ${{ secrets.CPANEL_USER }}
+            IdentityFile ~/.ssh/id_rsa
+            MACs hmac-sha2-512
+            StrictHostKeyChecking yes
+          " > ~/.ssh/config
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2
+        with:
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          name: id_rsa
+          if_key_exists: replace
+          known_hosts: unnecessary
+
+      - name: Deploy to cPanel via SSH
+        run: |
+          cd deploy-package && tar czf ../deploy.tar.gz . && cd ..
+          ssh cpanel "mkdir -p ${{ secrets.STRAPI_APP_PATH }}"
+          scp deploy.tar.gz cpanel:${{ secrets.STRAPI_APP_PATH }}/ || exit 1
+
+          ssh cpanel "
+            cd ${{ secrets.STRAPI_APP_PATH }} && \
+            echo '📦 Extracting deployment package...' && \
+            tar xzf deploy.tar.gz && \
+            rm deploy.tar.gz && \
+            echo '📋 Deployed contents:' && \
+            ls -la && \
+            if [ ! -d 'dist' ]; then
+              echo '❌ dist folder missing after extraction!' && exit 1
+            fi && \
+            echo '🚀 Starting deployment process...' && \
+            ${{ secrets.ACTIVATE_COMMAND }} && \
+            npm ci --production --legacy-peer-deps --no-audit --no-fund --network-timeout 100000 --maxsockets=5 --no-optional || exit 1 && \
+            if ! cloudlinux-selector stop --json --interpreter nodejs --user ${{ secrets.CPANEL_USER }} --app-root ${{ secrets.STRAPI_APP_PATH }}; then
+              echo '❌ Failed to stop the app'
+              exit 1
+            fi && \
+            sleep 5 && \
+            if ! cloudlinux-selector start --json --interpreter nodejs --user ${{ secrets.CPANEL_USER }} --app-root ${{ secrets.STRAPI_APP_PATH }}; then
+              echo '❌ Failed to start the app'
+              exit 1
+            fi && \
+            echo '✅ Deployment commands completed successfully'
+          "
+
+      - name: Verify Deployment
+        run: |
+          echo "⏳ Waiting for Strapi to start..."
+          for i in {1..6}; do
+            if curl -m 30 -sSf ${{ secrets.STRAPI_URL }}/admin > /dev/null 2>&1; then
+              echo "✅ Deployment verified successfully!"
+              exit 0
+            fi
+            echo "Attempt $i failed, waiting 10 seconds before retry..."
+            sleep 10
+          done
+          echo "❌ Failed to verify deployment after 6 attempts (1 minute total)"
+          exit 1

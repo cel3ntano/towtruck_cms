@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_shared_trasportable_items_lists",
+  "info": {
+    "displayName": "Transportable Items List",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "transportable_item_title": {
+      "type": "string"
+    },
+    "transportable_item_media": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::transportable-item-icon.transportable-item-icon"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_sections_transportable_items",
+  "info": {
+    "displayName": "Transportable Items",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "transportable_items_list": {
+      "displayName": "Trasportable Items List",
+      "type": "component",
+      "repeatable": true,
+      "component": "shared.trasportable-items-list"
+    }
+  }
+}

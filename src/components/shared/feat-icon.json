@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_shared_feat_icons",
+  "info": {
+    "displayName": "FeatIcon",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "svg64_svg64": {
+      "type": "text"
+    },
+    "feature_icon": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::feature-icon.feature-icon"
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_sections_slider_sections",
+  "info": {
+    "displayName": "Slider Section",
+    "icon": "picture",
+    "description": ""
+  },
+  "options": {},
+  "attributes": {
+    "title": {
+      "type": "string"
+    },
+    "slider_images": {
+      "type": "component",
+      "repeatable": true,
+      "component": "shared.truck-in-action-slider"
+    }
+  }
+}
