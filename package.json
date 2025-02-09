@@ -9,7 +9,11 @@
     "develop": "strapi develop",
     "seed:example": "node ./scripts/seed.js",
     "start": "strapi start",
-    "strapi": "strapi"
+    "strapi": "strapi",
+    "sync:push": "ts-node scripts/sync.ts push",
+    "sync:pull": "ts-node scripts/sync.ts pull",
+    "sync:push:files": "ts-node scripts/sync.ts push --include-files",
+    "sync:pull:files": "ts-node scripts/sync.ts pull --include-files"
   },
   "dependencies": {
     "@strapi/plugin-cloud": "5.9.0",
@@ -27,7 +31,9 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "typescript": "^5"
+    "dotenv": "^16.4.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3"
   },
   "engines": {
     "node": ">=18.0.0 <=22.x.x",
